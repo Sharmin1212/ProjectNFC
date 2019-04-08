@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">ProjectNFC</string>
+    <string name="requirements">The application requires the activation of NFC and Android Beam</string>
+    <string name="attention">Attention</string>
+    <string name="ok">OK</string>
+    <string name="cancel">CANCEL</string>
+    <string name="notNFC">Your phone is not compatible with NFC</string>
+    <string name="notAndroidBeam">Your phone is not compatible with Android Beam</string>
+    <string name="enableSendData">Enable Send Data</string>
+    <string name="disableSendData">Disable Send Data</string>
+    <string name="enableReceiveData">Enable Receive data</string>
+    <string name="disableReceiveData">Disable Receive data</string>
+    <string name="receiveDataEnabled">Received data (enabled)</string>
+    <string name="data">Data</string>
+    <string name="sendDataEnabled">Write something to send it (enabled)</string>
+    <string name="receiveDataDisabled">Received data (disabled)</string>
+    <string name="sendDataDisabled">Write something to send it (disabled)</string>
+</resources>
