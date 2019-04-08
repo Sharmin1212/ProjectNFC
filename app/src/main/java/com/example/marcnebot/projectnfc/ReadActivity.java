@@ -1,84 +1,57 @@
 package com.example.marcnebot.projectnfc;
 
 import android.app.AlertDialog;
-import android.app.Dialog;
 import android.app.PendingIntent;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.Color;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.Parcelable;
 import android.support.v7.app.AppCompatActivity;
-import android.text.Editable;
-import android.text.TextWatcher;
-import android.view.Gravity;
+import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class MainActivity extends AppCompatActivity {
-    private boolean mResumed = false;
-    boolean canRead = true;
-    boolean canWrite = true;
+public class ReadActivity extends AppCompatActivity {
     NfcAdapter nfcAdapter;
+
+    boolean canRead = true;
+
+    TextView textViewReceiveData;
+    TextView textViewReceivedData;
 
     PendingIntent mNfcPendingIntent;
     IntentFilter[] mNdefExchangeFilters;
 
     int intData;
 
-    EditText editText;
-
-    TextView textViewSendData;
-    TextView textViewReceiveData;
-    TextView textViewReceivedData;
-
-    Button buttonEnableSend;
     Button buttonEnableReceive;
-    Button buttonDisableSend;
     Button buttonDisableReceive;
+    Button buttonWrite;
 
+    Utils u = new Utils(this);
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        editText = findViewById(R.id.editText);
-        editText.addTextChangedListener(mTextWatcher);
+        setContentView(R.layout.activity_read);
 
-
-        textViewSendData = findViewById(R.id.textViewSendData);
         textViewReceiveData = findViewById(R.id.textViewReceiveData);
         textViewReceivedData = findViewById(R.id.textViewReceivedData);
-
-        buttonEnableSend = findViewById(R.id.buttonEnableSend);
         buttonEnableReceive = findViewById(R.id.buttonEnableReceive);
-        buttonDisableSend = findViewById(R.id.buttonDisableSend);
         buttonDisableReceive = findViewById(R.id.buttonDisableReceive);
+        buttonWrite = findViewById(R.id.buttonWrite);
 
         nfcAdapter = NfcAdapter.getDefaultAdapter(this);
 
-        // Handle all of our received NFC intents in this activity.
         mNfcPendingIntent = PendingIntent.getActivity(this, 0,
                 new Intent(this, getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0);
 
-
-        buttonEnableSend.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Toast.makeText(getApplicationContext(), "Send enabled", Toast.LENGTH_SHORT).show();
-                enableNdefExchangeMode();
-                textViewSendData.setText(getString(R.string.sendDataEnabled));
-            }
-        });
 
         buttonEnableReceive.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -89,24 +62,22 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        buttonDisableSend.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Toast.makeText(getApplicationContext(), "Send disabled", Toast.LENGTH_SHORT).show();
-                disableNdefExchangeMode();
-                textViewSendData.setText(getString(R.string.sendDataDisabled));
-            }
-        });
-
         buttonDisableReceive.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Toast.makeText(getApplicationContext(), "Receive disabled", Toast.LENGTH_SHORT).show();
                 canRead = false;
                 textViewReceiveData.setText(getString(R.string.receiveDataDisabled));
-
             }
         });
+
+        buttonWrite.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                finish();
+            }
+        });
+
     }
 
     @Override
@@ -124,26 +95,25 @@ public class MainActivity extends AppCompatActivity {
 
 
         if (!nfcAdapter.isEnabled() || !nfcAdapter.isNdefPushEnabled()) {
-            createAlertDialog();
+            u.createAlertDialog();
         }
 
 
-        mResumed = true;
         if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(getIntent().getAction())) {
             NdefMessage[] messages = getNdefMessages(getIntent());
             byte[] payload = messages[0].getRecords()[0].getPayload();
             setNoteBody(new String(payload));
             setIntent(new Intent()); // Consume this intent.
         }
-            enableNdefExchangeMode();
+        enableNdefExchangeMode();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        mResumed = false;
-        nfcAdapter.setNdefPushMessage(null, MainActivity.this);
+        nfcAdapter.setNdefPushMessage(null, ReadActivity.this);
     }
+
 
     @Override
     protected void onNewIntent(Intent intent) {
@@ -154,25 +124,14 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private TextWatcher mTextWatcher = new TextWatcher() {
+    private void setNoteBody(String body) {
+        textViewReceivedData.setText(body);
 
-        @Override
-        public void onTextChanged(CharSequence arg0, int arg1, int arg2, int arg3) {
-
+        if (isInteger(body)) {
+            intData = Integer.parseInt(body);
         }
 
-        @Override
-        public void beforeTextChanged(CharSequence arg0, int arg1, int arg2, int arg3) {
-
-        }
-
-        @Override
-        public void afterTextChanged(Editable arg0) {
-            if (mResumed) {
-                nfcAdapter.setNdefPushMessage(getNoteAsNdef(), MainActivity.this);
-            }
-        }
-    };
+    }
 
     private void promptForContent(final NdefMessage msg) {
         new AlertDialog.Builder(this).setTitle("Replace current content?")
@@ -189,24 +148,6 @@ public class MainActivity extends AppCompatActivity {
 
                     }
                 }).show();
-    }
-
-    private void setNoteBody(String body) {
-        textViewReceivedData.setText(body);
-
-        if (isInteger(body)) {
-            intData = Integer.parseInt(body);
-        }
-
-    }
-
-    private NdefMessage getNoteAsNdef() {
-        byte[] textBytes = editText.getText().toString().getBytes();
-        NdefRecord textRecord = new NdefRecord(NdefRecord.TNF_MIME_MEDIA, "text/plain".getBytes(),
-                new byte[]{}, textBytes);
-        return new NdefMessage(new NdefRecord[]{
-                textRecord
-        });
     }
 
     NdefMessage[] getNdefMessages(Intent intent) {
@@ -238,15 +179,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void enableNdefExchangeMode() {
-        nfcAdapter.setNdefPushMessage(getNoteAsNdef(),MainActivity.this);
+        //nfcAdapter.setNdefPushMessage(getNoteAsNdef(), WriteActivity.this);
         nfcAdapter.enableForegroundDispatch(this, mNfcPendingIntent, mNdefExchangeFilters, null);
     }
 
     private void disableNdefExchangeMode() {
-       nfcAdapter.setNdefPushMessage(null, MainActivity.this);
-       nfcAdapter.disableForegroundDispatch(this);
+        //nfcAdapter.setNdefPushMessage(null, WriteActivity.this);
+        nfcAdapter.disableForegroundDispatch(this);
     }
-
 
     public static boolean isInteger(String s) {
         return isInteger(s, 10);
@@ -263,63 +203,4 @@ public class MainActivity extends AppCompatActivity {
         }
         return true;
     }
-
-    public void createAlertDialog() {
-
-        AlertDialog alertDialog = new AlertDialog.Builder(this).create();
-
-        // Set Custom Title
-        TextView title = new TextView(this);
-        // Title Properties
-        title.setText(getString(R.string.attention));
-        title.setPadding(16, 16, 16, 16);   // Set Position
-        title.setGravity(Gravity.CENTER);
-        title.setTextColor(Color.BLACK);
-        title.setTextSize(20);
-        alertDialog.setCustomTitle(title);
-
-        TextView msg = new TextView(this);
-        msg.setText(getString(R.string.requirements));
-        msg.setPadding(16, 16, 16, 16);
-        msg.setGravity(Gravity.CENTER_HORIZONTAL);
-        msg.setTextColor(Color.BLACK);
-        alertDialog.setView(msg);
-
-        alertDialog.setButton(AlertDialog.BUTTON_NEGATIVE, getString(R.string.ok), new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-                startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS));
-            }
-        });
-
-        alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, getString(R.string.cancel), new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-                finish();
-            }
-        });
-
-        new Dialog(getApplicationContext());
-        alertDialog.show();
-
-        final Button okBT = alertDialog.getButton(AlertDialog.BUTTON_NEUTRAL);
-        LinearLayout.LayoutParams neutralBtnLP = (LinearLayout.LayoutParams) okBT.getLayoutParams();
-        neutralBtnLP.gravity = Gravity.FILL_HORIZONTAL;
-        okBT.setPadding(50, 10, 10, 10);   // Set Position
-        okBT.setLayoutParams(neutralBtnLP);
-
-        final Button cancelBT = alertDialog.getButton(AlertDialog.BUTTON_NEGATIVE);
-        LinearLayout.LayoutParams negBtnLP = (LinearLayout.LayoutParams) okBT.getLayoutParams();
-        negBtnLP.gravity = Gravity.FILL_HORIZONTAL;
-        cancelBT.setLayoutParams(negBtnLP);
-    }
 }
-
-
-
-/* App Simple
-- Permisos
-- Comprobar NFC, si no tiene avisar
-- Funciones para escribir NFC
-- Funciones leer NFC
- */
-
-// pasar string --> si es solo un int: comprobar como int
