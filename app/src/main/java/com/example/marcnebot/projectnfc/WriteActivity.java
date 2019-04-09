@@ -6,7 +6,6 @@ import android.content.IntentFilter;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
-import android.os.Build;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
@@ -20,11 +19,8 @@ import android.widget.Toast;
 public class WriteActivity extends AppCompatActivity {
     private boolean mResumed = false;
 
-    NfcAdapter nfcAdapter;
-
     PendingIntent mNfcPendingIntent;
     IntentFilter[] mNdefExchangeFilters;
-
 
     EditText editText;
 
@@ -33,8 +29,7 @@ public class WriteActivity extends AppCompatActivity {
     Button buttonDisableSend;
     Button buttonRead;
 
-    Utils u = new Utils(this);
-
+    Utils u;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -49,28 +44,27 @@ public class WriteActivity extends AppCompatActivity {
         buttonDisableSend = findViewById(R.id.buttonDisableSend);
         buttonRead = findViewById(R.id.buttonRead);
 
+        u = new Utils(this);
 
-        nfcAdapter = NfcAdapter.getDefaultAdapter(this);
+        u.nfcAdapter = NfcAdapter.getDefaultAdapter(this);
 
         // Handle all of our received NFC intents in this activity.
         mNfcPendingIntent = PendingIntent.getActivity(this, 0,
                 new Intent(this, getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0);
 
-
         buttonEnableSend.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Toast.makeText(getApplicationContext(), "Send enabled", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), getString(R.string.sendEnabled), Toast.LENGTH_SHORT).show();
                 enableNdefExchangeMode();
                 textViewSendData.setText(getString(R.string.sendDataEnabled));
             }
         });
 
-
         buttonDisableSend.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Toast.makeText(getApplicationContext(), "Send disabled", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), getString(R.string.sendDisabled), Toast.LENGTH_SHORT).show();
                 disableNdefExchangeMode();
                 textViewSendData.setText(getString(R.string.sendDataDisabled));
             }
@@ -83,30 +77,15 @@ public class WriteActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
-
-
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (nfcAdapter == null) {
-            Toast.makeText(getApplicationContext(), getString(R.string.notNFC), Toast.LENGTH_SHORT).show();
-            finish();
-        }
-
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            Toast.makeText(this, getString(R.string.notAndroidBeam), Toast.LENGTH_SHORT).show();
-            finish();
-        }
-
-
-        if (!nfcAdapter.isEnabled() || !nfcAdapter.isNdefPushEnabled()) {
-            u.createAlertDialog();
-        }
-
+        u.checkNFC();
 
         mResumed = true;
+        textViewSendData.setText(getString(R.string.sendDataEnabled));
         enableNdefExchangeMode();
     }
 
@@ -114,9 +93,8 @@ public class WriteActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         mResumed = false;
-        nfcAdapter.setNdefPushMessage(null, WriteActivity.this);
+        u.nfcAdapter.setNdefPushMessage(null, WriteActivity.this);
     }
-
 
     private TextWatcher mTextWatcher = new TextWatcher() {
 
@@ -133,7 +111,7 @@ public class WriteActivity extends AppCompatActivity {
         @Override
         public void afterTextChanged(Editable arg0) {
             if (mResumed) {
-                nfcAdapter.setNdefPushMessage(getNoteAsNdef(), WriteActivity.this);
+                u.nfcAdapter.setNdefPushMessage(getNoteAsNdef(), WriteActivity.this);
             }
         }
     };
@@ -150,16 +128,14 @@ public class WriteActivity extends AppCompatActivity {
 
 
     private void enableNdefExchangeMode() {
-        nfcAdapter.setNdefPushMessage(getNoteAsNdef(), WriteActivity.this);
-        nfcAdapter.enableForegroundDispatch(this, mNfcPendingIntent, mNdefExchangeFilters, null);
+        u.nfcAdapter.setNdefPushMessage(getNoteAsNdef(), WriteActivity.this);
+        u.nfcAdapter.enableForegroundDispatch(this, mNfcPendingIntent, mNdefExchangeFilters, null);
     }
 
     private void disableNdefExchangeMode() {
-        nfcAdapter.setNdefPushMessage(null, WriteActivity.this);
-        nfcAdapter.disableForegroundDispatch(this);
+        u.nfcAdapter.setNdefPushMessage(null, WriteActivity.this);
+        u.nfcAdapter.disableForegroundDispatch(this);
     }
-
-
 }
 
 

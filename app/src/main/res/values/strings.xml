@@ -15,4 +15,15 @@
     <string name="sendDataEnabled">Write something to send it (enabled)</string>
     <string name="receiveDataDisabled">Received data (disabled)</string>
     <string name="sendDataDisabled">Write something to send it (disabled)</string>
+    <string name="read">Read</string>
+    <string name="write">Write</string>
+    <string name="replaceContent">Replace current content?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="receiveEnabled">Receive enabled</string>
+    <string name="receiveDisabled">Receive disabled</string>
+    <string name="sendEnabled">Send enabled</string>
+    <string name="sendDisabled">Send disabled</string>
+    <string name="intReceived">Int received</string>
+    <string name="stringReceived">String received</string>
 </resources>

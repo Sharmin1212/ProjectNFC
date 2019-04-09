@@ -8,33 +8,29 @@ import android.content.IntentFilter;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
-import android.os.Build;
+import android.os.Bundle;
 import android.os.Parcelable;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
 public class ReadActivity extends AppCompatActivity {
-    NfcAdapter nfcAdapter;
-
     boolean canRead = true;
 
     TextView textViewReceiveData;
     TextView textViewReceivedData;
+    Button buttonEnableReceive;
+    Button buttonDisableReceive;
+    Button buttonWrite;
 
     PendingIntent mNfcPendingIntent;
     IntentFilter[] mNdefExchangeFilters;
 
     int intData;
 
-    Button buttonEnableReceive;
-    Button buttonDisableReceive;
-    Button buttonWrite;
-
-    Utils u = new Utils(this);
+    Utils u;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,7 +43,9 @@ public class ReadActivity extends AppCompatActivity {
         buttonDisableReceive = findViewById(R.id.buttonDisableReceive);
         buttonWrite = findViewById(R.id.buttonWrite);
 
-        nfcAdapter = NfcAdapter.getDefaultAdapter(this);
+        u = new Utils(this);
+
+        u.nfcAdapter = NfcAdapter.getDefaultAdapter(this);
 
         mNfcPendingIntent = PendingIntent.getActivity(this, 0,
                 new Intent(this, getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0);
@@ -56,7 +54,7 @@ public class ReadActivity extends AppCompatActivity {
         buttonEnableReceive.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Toast.makeText(getApplicationContext(), "Receive enabled", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), getString(R.string.receiveEnabled), Toast.LENGTH_SHORT).show();
                 canRead = true;
                 textViewReceiveData.setText(getString(R.string.receiveDataEnabled));
             }
@@ -65,7 +63,7 @@ public class ReadActivity extends AppCompatActivity {
         buttonDisableReceive.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Toast.makeText(getApplicationContext(), "Receive disabled", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), getString(R.string.receiveDisabled), Toast.LENGTH_SHORT).show();
                 canRead = false;
                 textViewReceiveData.setText(getString(R.string.receiveDataDisabled));
             }
@@ -83,21 +81,7 @@ public class ReadActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (nfcAdapter == null) {
-            Toast.makeText(getApplicationContext(), getString(R.string.notNFC), Toast.LENGTH_SHORT).show();
-            finish();
-        }
-
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            Toast.makeText(this, getString(R.string.notAndroidBeam), Toast.LENGTH_SHORT).show();
-            finish();
-        }
-
-
-        if (!nfcAdapter.isEnabled() || !nfcAdapter.isNdefPushEnabled()) {
-            u.createAlertDialog();
-        }
-
+        u.checkNFC();
 
         if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(getIntent().getAction())) {
             NdefMessage[] messages = getNdefMessages(getIntent());
@@ -111,7 +95,7 @@ public class ReadActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        nfcAdapter.setNdefPushMessage(null, ReadActivity.this);
+        u.nfcAdapter.setNdefPushMessage(null, ReadActivity.this);
     }
 
 
@@ -126,23 +110,24 @@ public class ReadActivity extends AppCompatActivity {
 
     private void setNoteBody(String body) {
         textViewReceivedData.setText(body);
-
-        if (isInteger(body)) {
+        if (Utils.isInteger(body)) {
+            Toast.makeText(getApplicationContext(), getString(R.string.intReceived), Toast.LENGTH_SHORT).show();
             intData = Integer.parseInt(body);
+        } else {
+            Toast.makeText(getApplicationContext(), getString(R.string.stringReceived), Toast.LENGTH_SHORT).show();
         }
-
     }
 
     private void promptForContent(final NdefMessage msg) {
-        new AlertDialog.Builder(this).setTitle("Replace current content?")
-                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+        new AlertDialog.Builder(this).setTitle(getString(R.string.replaceContent))
+                .setPositiveButton(getString(R.string.yes), new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface arg0, int arg1) {
                         String body = new String(msg.getRecords()[0].getPayload());
                         setNoteBody(body);
                     }
                 })
-                .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                .setNegativeButton(getString(R.string.no), new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface arg0, int arg1) {
 
@@ -179,28 +164,6 @@ public class ReadActivity extends AppCompatActivity {
     }
 
     private void enableNdefExchangeMode() {
-        //nfcAdapter.setNdefPushMessage(getNoteAsNdef(), WriteActivity.this);
-        nfcAdapter.enableForegroundDispatch(this, mNfcPendingIntent, mNdefExchangeFilters, null);
-    }
-
-    private void disableNdefExchangeMode() {
-        //nfcAdapter.setNdefPushMessage(null, WriteActivity.this);
-        nfcAdapter.disableForegroundDispatch(this);
-    }
-
-    public static boolean isInteger(String s) {
-        return isInteger(s, 10);
-    }
-
-    public static boolean isInteger(String s, int radix) {
-        if (s.isEmpty()) return false;
-        for (int i = 0; i < s.length(); i++) {
-            if (i == 0 && s.charAt(i) == '-') {
-                if (s.length() == 1) return false;
-                else continue;
-            }
-            if (Character.digit(s.charAt(i), radix) < 0) return false;
-        }
-        return true;
+        u.nfcAdapter.enableForegroundDispatch(this, mNfcPendingIntent, mNdefExchangeFilters, null);
     }
 }
